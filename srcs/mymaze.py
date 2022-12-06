@@ -6,7 +6,7 @@
 #    By: absalhi <absalhi@student.42.fr>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/12/05 20:54:15 by absalhi           #+#    #+#              #
-#    Updated: 2022/12/06 04:21:46 by absalhi          ###   ########.fr        #
+#    Updated: 2022/12/06 21:29:49 by absalhi          ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -26,8 +26,16 @@ class MyMaze:
     
     def __init__(self):
 
+        """
+        This class contains the whole game of MyMaze.
+            - Initialize the game screen
+            - Initialize all the variables to be used across the class
+            - Set the display mode depending on the primary screen measures
+            - Get the map from the file and parse it
+        """
+
         pg.init()
-        pg.display.set_caption("MyMaze v1.0")
+        pg.display.set_caption("MyMaze")
 
         monitors = get_monitors()
         for i in range(0, len(monitors)):
@@ -43,6 +51,7 @@ class MyMaze:
         self.is_fullscreen = False
         
         self.player = "srcs/resources/player/down_0.png"
+        self.shadow = "srcs/resources/shadow.png"
         self.wall = [f"srcs/resources/wall/{i}.png" for i in range(0, 4)]
         self.treasure = "srcs/resources/treasure.png"
         self.ground = [f"srcs/resources/ground/{i}.png" for i in range(0, 2)]
@@ -56,7 +65,7 @@ class MyMaze:
 
         try: f = open("map.ber", "r")
         except FileNotFoundError:
-            printf("File not found.\n", RED)
+            printf("map.ber: file not found.\n", RED)
             exit(1)
             
         _rows = f.readlines()
@@ -79,6 +88,12 @@ class MyMaze:
 
 
     def create_fonts(self, font_sizes):
+
+        """
+        This function creates the font to be used by the game;
+            - either provide it in the resources folder
+            - or the default one will be used (Arial)
+        """
         
         self.fonts = []
         
@@ -89,21 +104,36 @@ class MyMaze:
 
 
     def draw_cell(self, path, w, h, ic, ir, t=None):
+
+        """
+        This function draws every cell in the provided map to the game by updating it accordingly.
+        """
         
         _w, _h = w, h
-        if t == 3: _w, _h = _w - (_w * 25 / 100), _h - (_h * 25 / 100)
+        if (t == 1 and not ir == 0) and ((ir + 1 < self.n_rows) and self.rows[ir + 1][ic] in [0, 2, 3]) or (ir + 1 == self.n_rows): _h += 34
+        if t == 1 and ir == 0 and (ic == 0 or ic == self.n_columns - 1): _h -= 34
         if t == 2: _w, _h = _w - (_w * 25 / 100), _h + (_h * 15 / 100)
+        if t == 3: _w, _h = _w - (_w * 25 / 100), _h - (_h * 25 / 100)
+        if t == 4: _w, _h = _w - (w * 40 / 100), _h - (h * 40 / 100)
+        if t == 5: _w, _h = _w + (w * 25 / 100), _h
         cell = pg.image.load(path)
         cell = pg.transform.scale(cell, (_w, _h))
         cell.convert()
         
         __w, __h = ic * w, ir * h
-        if t == 3: __w, __h = __w + (w * 12 / 100), __h + (h * 12 / 100)
+        if t == 1 and not ir == 0: __h -= 34
         if t == 2: __w, __h = __w + (w * 12 / 100), __h - (h * 35 / 100)
+        if t == 3: __w, __h = __w + (w * 12 / 100), __h - (h * 12 / 100)
+        if t == 4: __w, __h = __w + (w * 19 / 100), __h + (h * 38 / 100)
+        if t == 5: __w, __h = __w - (w * 10 / 100), __h + (h * 12 / 100)
         self.screen.blit(cell, (__w, __h))
 
 
     def get_map(self):
+
+        """
+        This function goes through the map cell by cell, calling the draw_cell() for each element.
+        """
 
         width_px, height_px = int(self.WIDTH / self.n_columns), int(self.HEIGHT / self.n_rows)
 
@@ -115,7 +145,7 @@ class MyMaze:
                 
                 if c == 1:
 
-                    self.draw_cell(self.wall[0], width_px, height_px, ic, ir) if ir + 1 < self.n_rows and self.rows[ir + 1][ic] == 1 else self.draw_cell(self.wall[2], width_px, height_px, ic, ir)
+                    self.draw_cell(self.wall[0], width_px, height_px, ic, ir, c) if ir + 1 < self.n_rows and self.rows[ir + 1][ic] == 1 else self.draw_cell(self.wall[2], width_px, height_px, ic, ir, c)
                     
                 elif c in [0, 2, 3]:
                     
@@ -123,34 +153,37 @@ class MyMaze:
 
                 if c == 2:
 
+                    self.draw_cell(self.shadow, width_px, height_px, ic, ir, 4)
                     self.draw_cell(self.player, width_px, height_px, ic, ir, c)
                     self.player_pos["c"] = ic
                     self.player_pos["r"] = ir
                     
                 if c == 3:
 
+                    self.draw_cell(self.shadow, width_px, height_px, ic, ir, 5)
                     self.draw_cell(self.treasure, width_px, height_px, ic, ir, c)
                     
                 ic += 1
             ir += 1
 
 
-    def render(self, font, text, color, pos):
-
-        text_to_show = font.render(text, 0, pg.Color(color))
-        self.screen.blit(text_to_show, pos)
-
-
     def draw(self):
+
+        """
+        This function draws the game components, change animations frames and display the FPS.
+        """
         
         self.screen.fill("#000000")
         self.get_map()
         self.animate_sprites()
-        self.render(self.fonts[0], text=f"{int(self.clock.get_fps())} FPS",
-            color="red", pos=(25, 10))
+        self.screen.blit(self.fonts[0].render(f"{int(self.clock.get_fps())} FPS", 0, pg.Color("red")), (25, 10))
 
     
     def move_player(self, U, R, D, L):
+
+        """
+        This function moves the player in the map, changing its angle, position and animation frame.
+        """
         
         if U == 1:
 
@@ -194,6 +227,10 @@ class MyMaze:
 
 
     def animate_sprites(self):
+
+        """
+        This function changes the animation frame of the player depending on its angle.
+        """
         
         if self.player_deg == 0: self.player = f"srcs/resources/player/up_{self.frame}.png"
         if self.player_deg == 1: self.player = f"srcs/resources/player/right_{self.frame}.png"
@@ -205,6 +242,10 @@ class MyMaze:
 
     
     def run(self):
+
+        """
+        This function is the game loop, running repeatedly until an exiting event is set off.
+        """
         
         while self.is_running:
             
@@ -225,14 +266,11 @@ class MyMaze:
                         exit(0)
                     
                     if e.key in [pg.K_s, pg.K_DOWN]: self.move_player(0, 0, 1, 0)
-                    
-                    elif e.key in [pg.K_w, pg.K_UP]: self.move_player(1, 0, 0, 0)
-                        
-                    elif e.key in [pg.K_a, pg.K_LEFT]: self.move_player(0, 0, 0, 1)
-                        
-                    elif e.key in [pg.K_d, pg.K_RIGHT]: self.move_player(0, 1, 0, 0)
+                    if e.key in [pg.K_w, pg.K_UP]: self.move_player(1, 0, 0, 0)
+                    if e.key in [pg.K_a, pg.K_LEFT]: self.move_player(0, 0, 0, 1)
+                    if e.key in [pg.K_d, pg.K_RIGHT]: self.move_player(0, 1, 0, 0)
                         
 
-            self.clock.tick(self.FPS)
+            self.clock.tick(30 if self.FPS > 30 else self.FPS)
 
             pg.display.flip()
