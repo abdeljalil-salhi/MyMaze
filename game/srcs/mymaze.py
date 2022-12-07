@@ -6,11 +6,12 @@
 #    By: absalhi <absalhi@student.42.fr>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/12/05 20:54:15 by absalhi           #+#    #+#              #
-#    Updated: 2022/12/06 23:35:18 by absalhi          ###   ########.fr        #
+#    Updated: 2022/12/07 16:13:53 by absalhi          ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
 if __name__ == "__main__":
+    
     from utilities import printf, RED
     
     printf("Please run the game using the main.py file.\n", RED)
@@ -75,14 +76,16 @@ class MyMaze:
                 
                 if _rows[ir][ic] == "0": self.rows[ir][ic] = 0
                 if _rows[ir][ic] == "1": self.rows[ir][ic] = 1
-                if _rows[ir][ic] in "Pp": self.rows[ir][ic] = 2
+                if _rows[ir][ic] in "Pp":
+                    self.rows[ir][ic] = 2
+                    self.player_pos = { "c": ic, "r": ir }
                 if _rows[ir][ic] in "Ee": self.rows[ir][ic] = 3
         
-        self.player_pos = { "c": 1, "r": 1 }
+        self.validate_map()
+        
         self.player_deg = 2
         self.frame = 0
 
-        self.validate_map()
         self.run()
 
     

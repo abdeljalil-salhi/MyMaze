@@ -6,11 +6,12 @@
 #    By: absalhi <absalhi@student.42.fr>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/12/05 20:10:28 by absalhi           #+#    #+#              #
-#    Updated: 2022/12/05 22:24:40 by absalhi          ###   ########.fr        #
+#    Updated: 2022/12/07 14:59:12 by absalhi          ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
 if __name__ == "__main__":
+    
     from srcs.utilities import clear, printf, BLUE, RED
 
     clear()
