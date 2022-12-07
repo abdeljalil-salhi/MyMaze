@@ -6,7 +6,7 @@
 #    By: absalhi <absalhi@student.42.fr>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/12/05 20:54:15 by absalhi           #+#    #+#              #
-#    Updated: 2022/12/06 21:29:49 by absalhi          ###   ########.fr        #
+#    Updated: 2022/12/06 23:35:18 by absalhi          ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -64,10 +64,8 @@ class MyMaze:
         self.create_fonts([32, 20, 16, 8])
 
         try: f = open("map.ber", "r")
-        except FileNotFoundError:
-            printf("map.ber: file not found.\n", RED)
-            exit(1)
-            
+        except FileNotFoundError: self.map_error("file not found")
+        
         _rows = f.readlines()
         self.n_rows, self.n_columns = len(_rows), len(_rows[0]) - 1
         self.rows = [[0 for i in range(0, self.n_columns)] for i in range(0, self.n_rows)]
@@ -84,7 +82,37 @@ class MyMaze:
         self.player_deg = 2
         self.frame = 0
 
+        self.validate_map()
         self.run()
+
+    
+    def map_error(self, error="invalid map"):
+
+        """
+        This function displays an error message and exits the program with the status code 1.
+        """
+        
+        printf(f"map.ber: {error}.\n", RED)
+        exit(1)
+    
+
+    def validate_map(self):
+
+        """
+        This function checks if the map is valid, exits the program with an error in case of invalid map.
+        """
+
+        p = 0
+        e = 0
+
+        for r in self.rows:
+
+            for c in r:
+
+                if c == 2: p += 1
+                if c == 3: e += 1
+
+        if not p == 1 or not e == 1: self.map_error()
 
 
     def create_fonts(self, font_sizes):
