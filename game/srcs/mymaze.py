@@ -6,7 +6,7 @@
 #    By: absalhi <absalhi@student.42.fr>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/12/05 20:54:15 by absalhi           #+#    #+#              #
-#    Updated: 2022/12/07 16:13:53 by absalhi          ###   ########.fr        #
+#    Updated: 2022/12/08 17:10:16 by absalhi          ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -19,12 +19,13 @@ if __name__ == "__main__":
 
 import pygame as pg
 from screeninfo import get_monitors
+from configparser import ConfigParser
 
 from srcs.utilities import *
 
 
 class MyMaze:
-    
+
     def __init__(self):
 
         """
@@ -34,19 +35,12 @@ class MyMaze:
             - Set the display mode depending on the primary screen measures
             - Get the map from the file and parse it
         """
+        
+        RELATIVE_RESOLUTION = False
 
         pg.init()
-        pg.display.set_caption("MyMaze")
-
-        monitors = get_monitors()
-        for i in range(0, len(monitors)):
-
-            if monitors[i].is_primary:
-                
-                self.monitor = monitors[i]
-                self.RESOLUTION = self.WIDTH, self.HEIGHT = (
-                    monitors[i].width - 700), (monitors[i].height - 500)
-                
+        pg.display.set_caption("MyMaze")  
+             
         self.FPS = 120
         self.is_running = True
         self.is_fullscreen = False
@@ -57,38 +51,127 @@ class MyMaze:
         self.treasure = "srcs/resources/treasure.png"
         self.ground = [f"srcs/resources/ground/{i}.png" for i in range(0, 2)]
 
-        self.H_WIDTH, self.H_HEIGHT = self.WIDTH // 2, self.HEIGHT // 2
-        if self.is_fullscreen == False: self.screen = pg.display.set_mode(self.RESOLUTION, pg.RESIZABLE)
-        else: self.screen = pg.display.set_mode((0, 0), pg.FULLSCREEN)
-        self.clock = pg.time.Clock()
-
         self.create_fonts([32, 20, 16, 8])
 
         try: f = open("map.ber", "r")
+        
         except FileNotFoundError: self.map_error("file not found")
         
+        self.tmp = open("/tmp/mymaze.ber", "w+")
+        for l in f: self.tmp.write(l)
+        self.tmp.close()
+        f.seek(0)
+        
+        self.cparser = ConfigParser()
+        self.player_deg = 2
+        try:
+            
+            _f = open("/tmp/mymaze.ini", "w+")
+            _f.write("[SAVED]\n")
+            _f.write(f"PLAYER_DEG={self.player_deg}\n")
+            _f.close()
+
+        except: self.map_error("invalid config file")
+
         _rows = f.readlines()
         self.n_rows, self.n_columns = len(_rows), len(_rows[0]) - 1
         self.rows = [[0 for i in range(0, self.n_columns)] for i in range(0, self.n_rows)]
+        
         for ir in range(0, self.n_rows):
 
             for ic in range(0, self.n_columns):
                 
                 if _rows[ir][ic] == "0": self.rows[ir][ic] = 0
+
                 if _rows[ir][ic] == "1": self.rows[ir][ic] = 1
+
                 if _rows[ir][ic] in "Pp":
+
                     self.rows[ir][ic] = 2
                     self.player_pos = { "c": ic, "r": ir }
+                    
                 if _rows[ir][ic] in "Ee": self.rows[ir][ic] = 3
+
+        if RELATIVE_RESOLUTION:
+            
+            monitors = get_monitors()
+            for i in range(0, len(monitors)):
+
+                if monitors[i].is_primary:
+                    
+                    self.monitor = monitors[i]
+                    self.RESOLUTION = self.WIDTH, self.HEIGHT = (
+                        monitors[i].width - 700), (monitors[i].height - 500)
         
-        self.validate_map()
+        else: self.RESOLUTION = self.WIDTH, self.HEIGHT = (self.n_columns * 64), (self.n_rows * 64)
         
-        self.player_deg = 2
+        if self.is_fullscreen == False: self.screen = pg.display.set_mode(self.RESOLUTION, pg.RESIZABLE)
+            
+        else: self.screen = pg.display.set_mode((0, 0), pg.FULLSCREEN)
+
         self.frame = 0
+        self.validate_map()
+        self.clock = pg.time.Clock()
 
         self.run()
 
     
+    def convert_map(self):
+
+        try: self.tmp = open("/tmp/mymaze.ber", "r")
+        except: self.map_error("temporary file deleted")
+
+        try: self.cparser.read("/tmp/mymaze.ini")
+        except: self.map_error("config file deleted")
+
+        _tmp = self.tmp.readlines()
+
+        for ir in range(0, self.n_rows):
+
+            for ic in range(0, self.n_columns):
+                
+                if _tmp[ir][ic] == "0": self.rows[ir][ic] = 0
+                if _tmp[ir][ic] == "1": self.rows[ir][ic] = 1
+                if _tmp[ir][ic] in "Pp":
+                    self.rows[ir][ic] = 2
+                    self.player_pos = { "c": ic, "r": ir }
+                if _tmp[ir][ic] in "Ee": self.rows[ir][ic] = 3
+
+        self.tmp.close()
+        self.player_deg = int(self.cparser["SAVED"]["PLAYER_DEG"])
+
+    
+    def convert_to_file(self):
+
+        self.tmp = open("/tmp/mymaze.ber", "w+")
+        
+        for r in self.rows:
+
+            for c in r:
+
+                if c == 0: self.tmp.write("0")
+
+                elif c == 1: self.tmp.write("1")
+
+                elif c == 2: self.tmp.write("P")
+
+                elif c == 3: self.tmp.write("E")
+                
+                else: self.map_error("invalid temporary file")
+
+            self.tmp.write("\n")
+
+        self.tmp.close()
+        try:
+            
+            f = open("/tmp/mymaze.ini", "w+")
+            f.write("[SAVED]\n")
+            f.write(f"PLAYER_DEG={self.player_deg}\n")
+            f.close()
+
+        except: self.map_error("invalid config file")
+
+
     def map_error(self, error="invalid map"):
 
         """
@@ -141,22 +224,35 @@ class MyMaze:
         """
         
         _w, _h = w, h
-        if (t == 1 and not ir == 0) and ((ir + 1 < self.n_rows) and self.rows[ir + 1][ic] in [0, 2, 3]) or (ir + 1 == self.n_rows): _h += 34
-        if t == 1 and ir == 0 and (ic == 0 or ic == self.n_columns - 1): _h -= 34
+        
+        if (t == 1 and not ir == 0) and ((ir + 1 < self.n_rows) and self.rows[ir + 1][ic] in [0, 2, 3]) or (ir + 1 == self.n_rows): _h += 28
+        
+        if t == 1 and ir == 0 and (ic == 0 or ic == self.n_columns - 1): _h -= 28
+        
         if t == 2: _w, _h = _w - (_w * 25 / 100), _h + (_h * 15 / 100)
+        
         if t == 3: _w, _h = _w - (_w * 25 / 100), _h - (_h * 25 / 100)
+        
         if t == 4: _w, _h = _w - (w * 40 / 100), _h - (h * 40 / 100)
+        
         if t == 5: _w, _h = _w + (w * 25 / 100), _h
+        
         cell = pg.image.load(path)
         cell = pg.transform.scale(cell, (_w, _h))
         cell.convert()
         
         __w, __h = ic * w, ir * h
-        if t == 1 and not ir == 0: __h -= 34
+        
+        if t == 1 and not ir == 0: __h -= 28
+        
         if t == 2: __w, __h = __w + (w * 12 / 100), __h - (h * 35 / 100)
+        
         if t == 3: __w, __h = __w + (w * 12 / 100), __h - (h * 12 / 100)
+        
         if t == 4: __w, __h = __w + (w * 19 / 100), __h + (h * 38 / 100)
+        
         if t == 5: __w, __h = __w - (w * 10 / 100), __h + (h * 12 / 100)
+        
         self.screen.blit(cell, (__w, __h))
 
 
@@ -205,9 +301,10 @@ class MyMaze:
         """
         
         self.screen.fill("#000000")
+        self.convert_map()
         self.get_map()
         self.animate_sprites()
-        self.screen.blit(self.fonts[0].render(f"{int(self.clock.get_fps())} FPS", 0, pg.Color("red")), (25, 10))
+        self.screen.blit(self.fonts[1].render(f"{int(self.clock.get_fps())} FPS", 0, pg.Color("red")), (25, 10))
 
     
     def move_player(self, U, R, D, L):
@@ -256,6 +353,8 @@ class MyMaze:
                 self.rows[self.player_pos["r"]][self.player_pos["c"]], self.rows[self.player_pos["r"]][self.player_pos["c"] - 1] = 0, 2
                 self.player_pos["c"] -= 1
 
+        self.convert_to_file()
+
 
     def animate_sprites(self):
 
@@ -264,8 +363,11 @@ class MyMaze:
         """
         
         if self.player_deg == 0: self.player = f"srcs/resources/player/up_{self.frame}.png"
+
         if self.player_deg == 1: self.player = f"srcs/resources/player/right_{self.frame}.png"
+
         if self.player_deg == 2: self.player = f"srcs/resources/player/down_{self.frame}.png"
+        
         if self.player_deg == 3: self.player = f"srcs/resources/player/left_{self.frame}.png"
         
         self.frame += 1
@@ -296,10 +398,13 @@ class MyMaze:
                         self.is_running = False
                         exit(0)
                     
-                    if e.key in [pg.K_s, pg.K_DOWN]: self.move_player(0, 0, 1, 0)
                     if e.key in [pg.K_w, pg.K_UP]: self.move_player(1, 0, 0, 0)
-                    if e.key in [pg.K_a, pg.K_LEFT]: self.move_player(0, 0, 0, 1)
+
                     if e.key in [pg.K_d, pg.K_RIGHT]: self.move_player(0, 1, 0, 0)
+
+                    if e.key in [pg.K_s, pg.K_DOWN]: self.move_player(0, 0, 1, 0)
+                    
+                    if e.key in [pg.K_a, pg.K_LEFT]: self.move_player(0, 0, 0, 1)
                         
 
             self.clock.tick(30 if self.FPS > 30 else self.FPS)
